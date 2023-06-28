@@ -49,7 +49,7 @@ int main() {
   double cash = 100000;
   double gs_shares = 0;
   double ms_shares = 0;
-  int num_shares = 1000;  // The number of shares to long or short
+  int base_num_shares = 1000;  // The number of shares to long or short
   
   int gs_position = 0; // positive for long, negative for short
   int ms_position = 0; // positive for long, negative for short
@@ -70,7 +70,14 @@ int main() {
     double current_spread = gs_prices[i] - ms_prices[i];
     double z_score = (current_spread - mean) / stddev;
 
-       if (z_score > 1.0) {
+    // Compute the number of shares to buy/sell based on the z-score
+    int num_shares = base_num_shares * abs(z_score);
+
+    if (z_score > 1.0) {
+      double potential_cost = gs_prices[i] * num_shares - ms_prices[i] * num_shares;
+      if (potential_cost > cash) {
+        num_shares = (cash / (gs_prices[i] - ms_prices[i])) * 0.9;  // 90% to leave some cash buffer
+      }
       if (gs_shares == 0 && ms_shares == 0) {
         gs_shares += num_shares;
         ms_shares -= num_shares;
@@ -83,6 +90,10 @@ int main() {
         cout << "Day " << i << ": Positions already open, waiting to close." << endl;
       }
     } else if (z_score < -1.0) {
+      double potential_cost = ms_prices[i] * num_shares - gs_prices[i] * num_shares;
+      if (potential_cost > cash) {
+        num_shares = (cash / (ms_prices[i] - gs_prices[i])) * 0.9;  // 90% to leave some cash buffer
+      }
       if (gs_shares == 0 && ms_shares == 0) {
         gs_shares -= num_shares;
         ms_shares += num_shares;
